@@ -1,39 +1,62 @@
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useCallback, useEffect, useState } from 'react'
-import { FieldValues, SubmitHandler, useForm } from 'react-hook-form'
+import React from 'react';
+import { useForm } from 'react-hook-form'
+import { addTodo, removeTodo, toggleTodo } from "@/app/store/todos";
+import { AppDispatch, RootState } from "@/app/store/store";
+import { useDispatch, useSelector } from "react-redux";
+import type { FieldValues, SubmitHandler } from 'react-hook-form'
 
 const FormSchema = z.object({
-      taskTitle: z.string({
-            required_error: 'المهمة مطلوبة',
-      }).min(3).max(50),
-      taskDescription: z.string().min(3).max(120),
-      completed: z.boolean()
+      id: z.string(),
+      name: z.string().min(6).max(255),
+      done: z.boolean()
 })
-
 type FormValues = z.infer<typeof FormSchema>
 
-export function AddTask({
+export function Todos({
       mode = 'add',
       formData,
 }: {
       formData?: FormValues
       mode?: 'edit' | 'add'
 }) {
-      const [todos, setTodos] = useState<any[]>([])
-      const form = useForm<z.infer<typeof FormSchema>>({
+      const todoList = useSelector((state: RootState) => state.todoReducer.list);
+      const dispatch = useDispatch<AppDispatch>();
+      const [todo, setTodo] = React.useState("");
+
+      const form = useForm({
             resolver: zodResolver(FormSchema),
       })
 
+      const onSubmit: SubmitHandler<FieldValues> = () => {
+            dispatch(
+                  addTodo({
+                        id: Date.now(),
+                        name: todo,
+                        done: false,
+                  })
+            );
+            setTodo("");
+      }
+
+      const handleDelete = (id: number) => {
+            dispatch(removeTodo(id));
+      };
+
+      const handleToggle = (id: number) => {
+            dispatch(toggleTodo(id));
+      };
+
       return (
-            <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+            <div className="flex min-h-full flex-1 flex-col justify-center lg:px-8">
                   <div className="sm:mx-auto sm:w-full sm:max-w-sm">
                         <h2 className="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-zinc-900">
                               Add a new task                        </h2>
                   </div>
-                  <div className=" md:mx-auto md:w-full md:max-w-md">
-                        <form className="px-8 pt-6 pb-8
+                  <div className=" md:mx-auto md:w-full md:max-w-md bg-white shadow-lg rounded ">
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="px-8 pt-6 pb-8
                          space-y-6">
                               <label
                                     className="block
@@ -43,33 +66,43 @@ export function AddTask({
                                     Task Title
                               </label>
                               <input
-                                    className="block mb-6 w-full max-w-lg px-3 py-2 text-sm leading-tight text-gray-700 border rounded appearance-none focus:outline-none focus:shadow-outline"
-                                    id="taskTitle"
+                                    className="block mb-2 w-full max-w-lg px-3 py-2 text-sm leading-tight text-gray-700 border rounded appearance-none focus:outline-none focus:shadow-outline"
+                                    id="name"
                                     type="text"
-                                    placeholder="Task Title"
+                                    placeholder="Enter Your Task"
+                                    onChange={(e) => setTodo(e.target.value)}
+                                    value={todo}
                               />
-                              <label
-                                    className="block
-                                    text-sm font-bold text-gray-700"
-                                    htmlFor="taskDescription"
-                              >
-                                    Task Description
-                              </label>
-                              <textarea
-                                    className="block w-full min-h-[8rem] max-w-lg mb-6 text-sm leading-tight text-gray-700 border rounded px-3 py-2 appearance-none focus:outline-none focus:shadow-outline resize-y"
-                                    id="taskDescription"
-                                    placeholder="Task Description"
-                              />
-                              <div className="mb-6 text-center">
+                              <div className="mb-2 text-center">
                                     <button
-                                          className="w-full px-4 py-2 font-bold text-white bg-blue-200 rounded-full hover:bg-blue-300 focus:outline-none focus:shadow-outline"
+                                          className="w-full px-4 py-2 font-bold text-white bg-cyan-700 rounded-full hover:bg-cyan-900 focus:outline-none focus:shadow-outline"
                                           type="submit"
                                     >
                                           Add Task
                                     </button>
                               </div>
                         </form>
+                        <div className=" md:mx-auto md:w-full md:max-w-md bg-white shadow-lg rounded ">
+                              {todoList.map((todo) => {
+                                    return (
+                                          <div key={todo.id} className="flex">
+                                                <input
+                                                      type="checkbox"
+                                                      checked={todo.done}
+                                                      onChange={() => handleToggle(todo.id)}
+                                                />
+                                                {todo.name}
+
+                                                <button onClick={() => handleDelete(todo.id)} className="ml-auto">
+                                                      🗑️
+                                                </button>
+                                          </div>
+                                    );
+                              })}
+                        </div>
                   </div>
             </div>
       );
 }
+
+export default Todos;
